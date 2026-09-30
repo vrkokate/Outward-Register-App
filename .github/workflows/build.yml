@@ -19,14 +19,230 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.4'
+
+      - name: Create Outward App Files
+        run: |
+          mkdir -p app/src/main/java/com/office/outwardregister
+          mkdir -p app/src/main/res/layout
+          mkdir -p app/src/main/res/values
+
+          cat << 'EOF' > settings.gradle
+          rootProject.name = "OutwardRegister"
+          include ':app'
+          EOF
+
+          cat << 'EOF' > build.gradle
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.2'
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          EOF
+
+          cat << 'EOF' > app/build.gradle
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.office.outwardregister'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId "com.office.outwardregister"
+                  minSdk 21
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'com.google.android.material:material:1.11.0'
+          }
+          EOF
+
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:allowBackup="true"
+                  android:label="जावक रजिस्टर"
+                  android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat << 'EOF' > app/src/main/res/values/strings.xml
+          <resources>
+              <string name="app_name">जावक रजिस्टर</string>
+          </resources>
+          EOF
+
+          cat << 'EOF' > app/src/main/res/layout/activity_main.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+              android:padding="16dp"
+              android:background="#F5F5F5">
+
+              <TextView
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:text="कार्यालयीन जावक (Outward) रजिस्टर"
+                  android:textSize="20sp"
+                  android:textStyle="bold"
+                  android:textColor="#1A237E"
+                  android:gravity="center"
+                  android:layout_marginBottom="16dp" />
+
+              <EditText
+                  android:id="@+id/etOutwardNo"
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:hint="जावक क्रमांक (उदा. 2026/01)"
+                  android:layout_marginBottom="8dp" />
+
+              <EditText
+                  android:id="@+id/etDate"
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:hint="दिनांक (उदा. DD/MM/YYYY)"
+                  android:layout_marginBottom="8dp" />
+
+              <EditText
+                  android:id="@+id/etRecipient"
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:hint="ज्यास पाठविले (Recipient)"
+                  android:layout_marginBottom="8dp" />
+
+              <EditText
+                  android:id="@+id/etSubject"
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:hint="पत्राचा विषय (Subject)"
+                  android:layout_marginBottom="8dp" />
+
+              <Button
+                  android:id="@+id/btnSave"
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:text="नोंद जतन करा (Save)"
+                  android:backgroundTint="#1A237E"
+                  android:textColor="#FFFFFF"
+                  android:layout_marginBottom="16dp" />
+
+              <TextView
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:text="नोंदवलेली पत्रे:"
+                  android:textStyle="bold"
+                  android:layout_marginBottom="8dp" />
+
+              <ListView
+                  android:id="@+id/lvOutward"
+                  android:layout_width="match_parent"
+                  android:layout_height="0dp"
+                  android:layout_weight="1" />
+          </LinearLayout>
+          EOF
+
+          cat << 'EOF' > app/src/main/java/com/office/outwardregister/MainActivity.java
+          package com.office.outwardregister;
+
+          import android.os.Bundle;
+          import android.widget.ArrayAdapter;
+          import android.widget.Button;
+          import android.widget.EditText;
+          import android.widget.ListView;
+          import android.widget.Toast;
+          import androidx.appcompat.app.AppCompatActivity;
+          import java.util.ArrayList;
+
+          public class MainActivity extends AppCompatActivity {
+              private EditText etOutwardNo, etDate, etRecipient, etSubject;
+              private Button btnSave;
+              private ListView lvOutward;
+              private ArrayList<String> outwardList;
+              private ArrayAdapter<String> adapter;
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  setContentView(R.layout.activity_main);
+
+                  etOutwardNo = findViewById(R.id.etOutwardNo);
+                  etDate = findViewById(R.id.etDate);
+                  etRecipient = findViewById(R.id.etRecipient);
+                  etSubject = findViewById(R.id.etSubject);
+                  btnSave = findViewById(R.id.btnSave);
+                  lvOutward = findViewById(R.id.lvOutward);
+
+                  outwardList = new ArrayList<>();
+                  adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, outwardList);
+                  lvOutward.setAdapter(adapter);
+
+                  btnSave.setOnClickListener(v -> {
+                      String no = etOutwardNo.getText().toString().trim();
+                      String date = etDate.getText().toString().trim();
+                      String to = etRecipient.getText().toString().trim();
+                      String sub = etSubject.getText().toString().trim();
+
+                      if (no.isEmpty() || to.isEmpty()) {
+                          Toast.makeText(this, "कृपया आवश्यक माहिती भरा", Toast.LENGTH_SHORT).show();
+                          return;
+                      }
+
+                      String record = "जावक क्र: " + no + " | दिनांक: " + date + "\nप्रति: " + to + "\nविषय: " + sub;
+                      outwardList.add(0, record);
+                      adapter.notifyDataSetChanged();
+
+                      etOutwardNo.setText("");
+                      etDate.setText("");
+                      etRecipient.setText("");
+                      etSubject.setText("");
+                      Toast.makeText(this, "नोंद यशस्वीरीत्या जतन झाली!", Toast.LENGTH_SHORT).show();
+                  });
+              }
+          }
+          EOF
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug
+        run: gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Outward-App-APK
+          name: Outward-Register-APK
           path: app/build/outputs/apk/debug/*.apk
